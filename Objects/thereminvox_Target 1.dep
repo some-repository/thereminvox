@@ -1,5 +1,5 @@
 Dependencies for Project 'thereminvox', Target 'Target 1': (DO NOT MODIFY !)
-F (.\main.c)(0x6084E1CD)(--c99 -c --cpu Cortex-M3 -D__EVAL -g -O0 --apcs=interwork --split_sections-I.\RTE\Device\STM32F103C8-I.\RTE\_Target_1-IF:\keil\ARM\PACK\ARM\CMSIS\5.0.1\CMSIS\Include-IF:\keil\ARM\PACK\Keil\STM32F1xx_DFP\2.2.0\Device\Include-D__UVISION_VERSION="523" -D_RTE_ -DSTM32F10X_MD-o .\objects\main.o --omf_browse .\objects\main.crf --depend .\objects\main.d)
+F (.\main.c)(0x6087F3D3)(--c99 -c --cpu Cortex-M3 -D__EVAL -g -O0 --apcs=interwork --split_sections-I.\RTE\Device\STM32F103C8-I.\RTE\_Target_1-IF:\keil\ARM\PACK\ARM\CMSIS\5.0.1\CMSIS\Include-IF:\keil\ARM\PACK\Keil\STM32F1xx_DFP\2.2.0\Device\Include-D__UVISION_VERSION="523" -D_RTE_ -DSTM32F10X_MD-o .\objects\main.o --omf_browse .\objects\main.crf --depend .\objects\main.d)
 I (F:\keil\ARM\PACK\Keil\STM32F1xx_DFP\2.2.0\Device\Include\stm32f10x.h)(0x5FAEB4AA)
 I (.\RTE\_Target_1\RTE_Components.h)(0x6083E8EC)
 I (F:\keil\ARM\PACK\ARM\CMSIS\5.0.1\CMSIS\Include\core_cm3.h)(0x58988FDA)
