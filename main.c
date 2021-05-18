@@ -1,14 +1,17 @@
 #include "stm32f10x.h"
+#include "sin_array.h"
 
 int RCC_init (void);
-void MCO_init (void);
-void PWM_init (void);
+//void MCO_init (void);
+void pulse_gen_init (void);
 void ADC_init (void);
 void SysTick_init (void);
 void measure (void);
 void start_measure (void);
 void planner (void);
-void SetNVIC (void);
+void PWM_init (void);
+void sin_gen (void);
+//void SetNVIC (void);
 
 typedef struct
 {
@@ -16,23 +19,28 @@ typedef struct
 	int measurement_vol;
 } measurement;
 extern measurement mes = {0, 0};
+extern int frequency = 1000;
+extern int spp = 40; //количество выборок на период синусоиды, spp = sample_frequency/frequency
 
-const int TimerTick = 36000;
+const int TimerTick = 1800; //40 kHz
 int res_1 = 0;
 int res_2 = 0;
-int tick = 0;
+extern int tick = 0;
+extern int sin_tick = 0;
 
 int main()
 {
 	RCC_init ();
-	MCO_init ();
+	//MCO_init ();
 	__disable_irq ();
-	SysTick_init ();
+	pulse_gen_init ();
 	PWM_init ();
 	ADC_init ();
-	SetNVIC ();
+	SysTick_init ();
+	//SetNVIC ();
 	//void measure ();
 	//TIM1 -> CR1 |= TIM_CR1_CEN; //single pulse
+	__enable_irq ();
 	while (1)
 	{
 		
@@ -66,7 +74,7 @@ int RCC_init (void)
 	return 0;
 }
 
-void MCO_init (void)
+/*void MCO_init (void)
 {
 	RCC -> APB2ENR 	|= RCC_APB2ENR_IOPAEN;		// ?????? ???????????? ?? ????
  
@@ -79,54 +87,55 @@ void MCO_init (void)
 	RCC -> CFGR	&= ~RCC_CFGR_MCO;		// ???????? MCO
 	RCC -> CFGR	|= RCC_CFGR_MCO_PLL;		// ????????? ??? MCO ?????? ? PLL/2
 	//RCC -> CFGR	|= RCC_CFGR_MCO_SYSCLK;		// ?????????? ??? ??? ?????? ? SYSCLK
-}
+}*/
 
-void SetNVIC (void)
+/*void SetNVIC (void)
 {
 	NVIC_SetPriority (SysTick_IRQn, 0);
 	NVIC_EnableIRQ(TIM1_UP_IRQn);
 	NVIC_SetPriority (TIM1_UP_IRQn, 2);
 	__enable_irq (); //разрешение глобальных прерываний
-}
+}*/
 
 
-void PWM_init (void)
+void pulse_gen_init (void)
 {
 	// ????????????  GPIOA , TIM1, ?????????????? ??????? ?????
-	RCC -> APB2ENR |= (RCC_APB2ENR_IOPAEN | RCC_APB2ENR_TIM1EN | RCC_APB2ENR_AFIOEN);
+	RCC -> APB2ENR |= (RCC_APB2ENR_IOPAEN | RCC_APB2ENR_AFIOEN);
+	RCC -> APB1ENR |= RCC_APB1ENR_TIM2EN;
         
-    //PA11 AF open drain
-	GPIOA -> CRH &= ~GPIO_CRH_CNF11; //clean
-	GPIOA -> CRH |= (GPIO_CRH_CNF11_1 | GPIO_CRH_CNF11_1);
+    //PA1 AF open drain
+	GPIOA -> CRL &= ~GPIO_CRL_CNF1; //clean
+	GPIOA -> CRL |= (GPIO_CRL_CNF1_1 | GPIO_CRL_CNF1_0);
 
-	GPIOA -> CRH &= ~GPIO_CRH_MODE11; //clean
-	GPIOA -> CRH |= (GPIO_CRH_MODE11_1 | GPIO_CRH_MODE11_0); //MODE11 = Max Speed 50MHz
+	GPIOA -> CRL &= ~GPIO_CRL_MODE1; //clean
+	GPIOA -> CRL |= (GPIO_CRL_MODE1_1 | GPIO_CRL_MODE1_0); //MODE11 = Max Speed 50MHz
 	
-	//100 kHz, коэф. заполнения 0,5
+	//импульсы 5 uS
 	//делитель
-	TIM1 -> PSC = 72 - 1;
+	TIM2 -> PSC = 72 - 1;
 	//значение перезагрузки
-	TIM1 -> ARR = 10 - 1;
+	TIM2 -> ARR = 10 - 1;
 	//коэф. заполнения
-	TIM1 -> CCR4 = 5;
+	TIM2 -> CCR2 = 5;
 	
-	//настроим на выход канал 4, активный уровень высоки
-	TIM1 -> CCER |= (TIM_CCER_CC4E | TIM_CCER_CC4P);
+	//настроим на выход канал 2, активный уровень низкий
+	TIM2 -> CCER |= (TIM_CCER_CC2E | TIM_CCER_CC2P);
 	//разрешим использовать выводы таймера как выходы
-	TIM1 -> BDTR |= TIM_BDTR_MOE;
-	//PWM mode 1, прямой ШИМ 4 канал
-	TIM1 -> CCMR2 = ((TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4M_1) & (~TIM_CCMR2_OC4M_0));
+	TIM2 -> BDTR |= TIM_BDTR_MOE;
+	//PWM mode 1, прямой ШИМ 2 канал
+	TIM2 -> CCMR1 = ((TIM_CCMR1_OC2M_2 | TIM_CCMR1_OC2M_1) & (~TIM_CCMR1_OC2M_0));
     //???? ???? ????????? ?????? ?????, ??? ????? ??????? ???
     //TIM1->CCMR1 = TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC1M_1;
 	//считаем вверх
-	TIM1 -> CR1 &= ~TIM_CR1_DIR;
+	TIM2 -> CR1 &= ~TIM_CR1_DIR;
 	//выравнивание по фронту, Fast PWM
-	TIM1 -> CR1 &= ~TIM_CR1_CMS;
-	TIM1 -> CR1 |= TIM_CR1_OPM;
+	TIM2 -> CR1 &= ~TIM_CR1_CMS;
+	TIM2 -> CR1 |= TIM_CR1_OPM;
 	//enable interrupt
-	TIM1 -> DIER |= TIM_DIER_UIE;
-	__enable_irq (); //разрешение глобальных прерываний
-	NVIC_EnableIRQ(TIM1_UP_IRQn);
+	TIM2 -> DIER |= TIM_DIER_UIE;
+	NVIC_EnableIRQ(TIM2_IRQn);
+	//__enable_irq (); //разрешение глобальных прерываний
 
 }
 
@@ -189,7 +198,7 @@ void start_measure (void)
 	GPIOA -> CRL &= ~(GPIO_CRL_MODE3 | GPIO_CRL_CNF3); // PA3 - analog input
 	GPIOA -> CRL &= ~ (GPIO_CRL_MODE0 | GPIO_CRL_CNF0); // PA0 - analog input
 	
-	TIM1 -> CR1 |= TIM_CR1_CEN; //single pulse
+	TIM2 -> CR1 |= TIM_CR1_CEN; //single pulse
 }
 
 void measure (void)
@@ -211,13 +220,72 @@ void measure (void)
 	GPIOA -> BSRR |= ((1 << 3) | 1); //установка высокого уровня на PA0 и PA3
 }
 
-void TIM1_UP_IRQHandler(void) 
+void TIM2_IRQHandler(void) 
 {
-    TIM1 -> SR &= ~TIM_SR_UIF; //сброс флага прерывания
+    TIM2 -> SR &= ~TIM_SR_UIF; //сброс флага прерывания
 	measure ();
 }
 
 void planner (void)
 {
-		start_measure (); 
+	tick ++;
+	if (tick == 4000) //обнуление раз в 100 мс
+	{
+		start_measure (); //10 измерений в секунду
+		tick = 0;
+	}
+		
+	sin_gen ();
+	 
+}
+
+void PWM_init (void)
+{
+	RCC -> APB2ENR |= RCC_APB2ENR_TIM1EN;
+	
+	//PA8 AF push-pull
+	
+	GPIOA -> CRH	&= ~GPIO_CRH_CNF8;		// ?????????? ???? CNF ??? ???? 8. ????? 00 - Push-Pull 
+	GPIOA -> CRH	|= GPIO_CRH_CNF8_1;		// ?????? ????? ??? 8 ?? ???? ????? CNF  = 10 (?????????????? ???????, Push-Pull)
+ 
+	GPIOA -> CRH	&= ~GPIO_CRH_MODE8;				// ?????????? ???? MODE ??? ???? 8
+	GPIOA -> CRH	|= (GPIO_CRH_MODE8_1 | GPIO_CRH_MODE8_0);	// ?????????? ??? MODE ??? ?????? ????. ????? MODE11 = Max Speed 50MHz
+	
+	//делитель
+	TIM1 -> PSC = 7 - 1;
+	//значение перезагрузки
+	TIM1 -> ARR = 255 - 1;
+	
+	//настроим на выход канал 1, активный уровень высокий
+	TIM1 -> CCER |= TIM_CCER_CC1E;
+	TIM1 -> CCER &= ~TIM_CCER_CC1P;
+	//разрешим использовать выводы таймера как выходы
+	TIM1 -> BDTR |= TIM_BDTR_MOE;
+	//PWM mode 1, прямой ШИМ 1 канал
+	TIM1 -> CCMR1 = ((TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC1M_1) & (~TIM_CCMR1_OC1M_0));
+    //???? ???? ????????? ?????? ?????, ??? ????? ??????? ???
+    //TIM1->CCMR1 = TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC1M_1;
+	//считаем вверх
+	TIM1 -> CR1 |= TIM_CR1_DIR;
+	//выравнивание по фронту, Fast PWM
+	TIM1 -> CR1 &= ~TIM_CR1_CMS;
+	TIM1 -> CR1 |= TIM_CR1_OPM;
+}
+
+void sin_gen (void)
+{
+	if (sin_tick < spp)
+	{
+		sin_tick ++;
+	}
+	else
+	{
+		sin_tick = 0;
+	}
+	
+	int number = (int) ((frequency/100)*sin_tick); //минимальная частота 100 Гц
+	
+	//коэф. заполнения
+	TIM1 -> CCR1 = sin_arr [number];
+	TIM1 -> CR1 |= TIM_CR1_CEN; //single pulse
 }
