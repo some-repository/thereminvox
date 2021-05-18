@@ -11,6 +11,7 @@ void start_measure (void);
 void planner (void);
 void PWM_init (void);
 void sin_gen (void);
+void freq_calc (void);
 //void SetNVIC (void);
 
 typedef struct
@@ -19,14 +20,17 @@ typedef struct
 	int measurement_vol;
 } measurement;
 extern measurement mes = {0, 0};
-extern int frequency = 1000;
-extern int spp = 40; //количество выборок на период синусоиды, spp = sample_frequency/frequency
+//extern int frequency = 4000;
+extern int spp = 10; //количество выборок на период синусоиды, spp = sample_frequency/frequency
+extern int frequency_div_100 = 400;
+extern int frequency = 100;
 
 const int TimerTick = 1800; //40 kHz
 int res_1 = 0;
 int res_2 = 0;
 extern int tick = 0;
 extern int sin_tick = 0;
+extern int freq_calc_sum = 0;
 
 int main()
 {
@@ -228,15 +232,22 @@ void TIM2_IRQHandler(void)
 
 void planner (void)
 {
-	tick ++;
-	if (tick == 4000) //обнуление раз в 100 мс
+	sin_gen ();
+	
+	if (((tick % 80) == 0) && (tick <= 720)) //раз в 2 мс в течение первых 20 мс (период 50 Гц сети)
 	{
 		start_measure (); //10 измерений в секунду
-		tick = 0;
+		freq_calc ();
 	}
-		
-	sin_gen ();
-	 
+	
+	if (tick < 4000)
+	{
+		tick ++;
+	}
+	else
+	{
+		tick = 0; //обнуление раз в 100 мс
+	};
 }
 
 void PWM_init (void)
@@ -283,9 +294,23 @@ void sin_gen (void)
 		sin_tick = 0;
 	}
 	
-	int number = (int) ((frequency/100)*sin_tick); //минимальная частота 100 Гц
+	int number = frequency_div_100 * sin_tick; //минимальная частота 100 Гц
 	
 	//коэф. заполнения
 	TIM1 -> CCR1 = sin_arr [number];
 	TIM1 -> CR1 |= TIM_CR1_CEN; //single pulse
+}
+
+void freq_calc (void)
+{
+	freq_calc_sum = freq_calc_sum + mes.measurement_freq;
+	if (tick == 720)
+	{
+		freq_calc_sum = freq_calc_sum / 10; //среднее за 10 измерений (в течение одного периода сети 50 Гц)
+		frequency = (int) (((freq_calc_sum / 4095.0) * 3900) + 100);
+		frequency_div_100 = frequency / 100;
+		spp = 40000 / frequency;
+		freq_calc_sum = 0;
+	}
+	
 }

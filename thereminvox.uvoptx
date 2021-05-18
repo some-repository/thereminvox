@@ -156,17 +156,7 @@
         <Ww>
           <count>1</count>
           <WinNumber>1</WinNumber>
-          <ItemText>mes.measurement_vol,0x0A</ItemText>
-        </Ww>
-        <Ww>
-          <count>2</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>mes</ItemText>
-        </Ww>
-        <Ww>
-          <count>3</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>mes</ItemText>
+          <ItemText>frequency,0x0A</ItemText>
         </Ww>
       </WatchWindow1>
       <Tracepoint>
