@@ -185,9 +185,9 @@ void planner (void) //планировщик
 {
 	sin_gen ();
 	
-	if (((tick % 80) == 0) && (tick <= 720)) //раз в 2 мс в течение первых 20 мс (период 50 Гц сети)
+	if ((tick % 80) == 0) //раз в 2 мс в течение цикла (100 мс)
 	{
-		start_measure (); //10 измерений в секунду
+		start_measure (); //500 измерений в секунду
 		freq_calc ();
 	}
 	
@@ -251,12 +251,12 @@ void sin_gen (void)
 void freq_calc (void)
 {
 	freq_calc_sum = freq_calc_sum + mes.measurement_freq;
-	if (tick == 720)
+	if (tick == 3920)
 	{
-		if (cal_tick < 10) //измерение базового уровня при старте, среднее за 100 отсчетов
+		if (cal_tick < 10) //измерение базового уровня при старте, среднее за 500 отсчетов
 		{
 			cal_tick ++;
-			freq_calc_sum = freq_calc_sum / 10;
+			freq_calc_sum = freq_calc_sum / 50;
 			cal_sum = cal_sum + freq_calc_sum;
 			if (cal_tick == 10)
 			{
@@ -268,7 +268,7 @@ void freq_calc (void)
 		}
 		else
 		{
-			freq_calc_sum = (freq_calc_sum / 10) - cal_sum; //среднее за 10 измерений (в течение одного периода сети 50 Гц)
+			freq_calc_sum = (freq_calc_sum / 50) - cal_sum; //(среднее за 50 измерений в течение 100 мс) - (базовое значение)
 			if (freq_calc_sum < 0)
 			{
 				freq_calc_sum = 0;
