@@ -158,6 +158,11 @@
           <WinNumber>1</WinNumber>
           <ItemText>frequency,0x0A</ItemText>
         </Ww>
+        <Ww>
+          <count>2</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>cal_sum,0x0A</ItemText>
+        </Ww>
       </WatchWindow1>
       <Tracepoint>
         <THDelay>0</THDelay>

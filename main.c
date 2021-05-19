@@ -24,13 +24,15 @@ extern measurement mes = {0, 0};
 extern int spp = 10; //количество выборок на период синусоиды, spp = sample_frequency/frequency
 extern int frequency_div_100 = 400;
 extern int frequency = 100;
+extern int cal_tick = 0;
+extern int freq_calc_sum = 0;
 
 const int TimerTick = 1800; //40 kHz
 int res_1 = 0;
 int res_2 = 0;
 extern int tick = 0;
 extern int sin_tick = 0;
-extern int freq_calc_sum = 0;
+extern int cal_sum = 0;
 
 int main()
 {
@@ -306,11 +308,34 @@ void freq_calc (void)
 	freq_calc_sum = freq_calc_sum + mes.measurement_freq;
 	if (tick == 720)
 	{
-		freq_calc_sum = freq_calc_sum / 10; //среднее за 10 измерений (в течение одного периода сети 50 Гц)
-		frequency = (int) (((freq_calc_sum / 4095.0) * 3900) + 100);
-		frequency_div_100 = frequency / 100;
-		spp = 40000 / frequency;
+		if (cal_tick < 10) //измерение базового уровня при старте, среднее за 100 отсчетов
+		{
+			cal_tick ++;
+			freq_calc_sum = freq_calc_sum / 10;
+			cal_sum = cal_sum + freq_calc_sum;
+			if (cal_tick == 10)
+			{
+				cal_sum = cal_sum / 10;
+			}
+			frequency = 4000;
+			frequency_div_100 = frequency / 100;
+			spp = 40000 / frequency;
+		}
+		else
+		{
+			freq_calc_sum = (freq_calc_sum / 10) - cal_sum; //среднее за 10 измерений (в течение одного периода сети 50 Гц)
+			if (freq_calc_sum < 0)
+			{
+				freq_calc_sum = 0;
+			}
+			frequency = (int) (((freq_calc_sum / (4095.0 - cal_sum)) * 2 * 3900.0) + 100);
+			if (frequency > 4000)
+			{
+				frequency = 4000;
+			}
+			frequency_div_100 = frequency / 100;
+			spp = 40000 / frequency;
+		}
 		freq_calc_sum = 0;
 	}
-	
 }
